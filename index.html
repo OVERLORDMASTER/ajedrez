@@ -1,0 +1,491 @@
+Here is an interactive chessboard HTML document where you can place and move pieces freely.
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tablero de Ajedrez Interactivo - Colocar Piezas</title>
+    <style>
+        * {
+            user-select: none; /* Evita seleccionar texto/imágenes al arrastrar */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(145deg, #2a3b2c 0%, #1e2a1f 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Chess Merida', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Contenedor principal */
+        .container {
+            background: #3b2a1f;
+            padding: 1.5rem;
+            border-radius: 48px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+        }
+
+        /* Canvas que dibuja el tablero y las piezas */
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+            cursor: pointer;
+            background-color: #f0d9b5; /* solo fondo si algo falla */
+        }
+
+        /* Panel de herramientas: piezas para colocar */
+        .toolbar {
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            background: #2e241d;
+            padding: 16px 20px;
+            border-radius: 60px;
+            backdrop-filter: blur(2px);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 5px 10px rgba(0,0,0,0.3);
+        }
+
+        .piece-btn {
+            background: #f7e9cd;
+            border: none;
+            font-size: 2.2rem;
+            width: 64px;
+            height: 64px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: inherit;
+        }
+
+        .piece-btn.selected {
+            background: #ffc107;
+            box-shadow: 0 0 0 3px white, 0 0 0 6px #ffb347;
+            transform: scale(1.02);
+        }
+
+        .piece-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Botón borrar y modo eliminar */
+        .action-btn {
+            background: #4a3a2c;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            width: auto;
+            padding: 0 24px;
+            gap: 8px;
+        }
+
+        .delete-mode {
+            background: #9e3b2f;
+            color: white;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 18px;
+            background: #1f1a15b3;
+            border-radius: 40px;
+            padding: 8px 20px;
+            color: #efebd0;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+
+        .status {
+            background: #00000066;
+            padding: 6px 14px;
+            border-radius: 32px;
+            font-size: 0.9rem;
+        }
+
+        button.clear-all {
+            background: #2c211b;
+            border: none;
+            color: #ffcd94;
+            padding: 6px 16px;
+            border-radius: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.1s linear;
+        }
+
+        button.clear-all:active {
+            background: #1a130f;
+        }
+
+        @media (max-width: 650px) {
+            .piece-btn {
+                width: 52px;
+                height: 52px;
+                font-size: 1.8rem;
+            }
+            .toolbar {
+                gap: 8px;
+                padding: 12px 16px;
+            }
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="container">
+        <canvas id="chessCanvas" width="560" height="560"></canvas>
+
+        <div class="toolbar">
+            <!-- Piezas blancas (primera fila) -->
+            <button class="piece-btn" data-piece="♙" data-color="white">♙</button>
+            <button class="piece-btn" data-piece="♘" data-color="white">♘</button>
+            <button class="piece-btn" data-piece="♗" data-color="white">♗</button>
+            <button class="piece-btn" data-piece="♖" data-color="white">♖</button>
+            <button class="piece-btn" data-piece="♕" data-color="white">♕</button>
+            <button class="piece-btn" data-piece="♔" data-color="white">♔</button>
+
+            <!-- Piezas negras -->
+            <button class="piece-btn" data-piece="♟" data-color="black">♟</button>
+            <button class="piece-btn" data-piece="♞" data-color="black">♞</button>
+            <button class="piece-btn" data-piece="♝" data-color="black">♝</button>
+            <button class="piece-btn" data-piece="♜" data-color="black">♜</button>
+            <button class="piece-btn" data-piece="♛" data-color="black">♛</button>
+            <button class="piece-btn" data-piece="♚" data-color="black">♚</button>
+
+            <!-- Herramienta borrar / eliminar -->
+            <button class="piece-btn action-btn" id="deleteBtn">🗑️</button>
+            <button class="piece-btn action-btn" id="clearAllBtn">♻️</button>
+        </div>
+        <div class="info-panel">
+            <span>📌 Haz clic en una pieza arriba, luego en el tablero para colocarla</span>
+            <span class="status" id="statusMsg">Modo: Colocar pieza</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // --- Configuración del tablero ---
+        const BOARD_SIZE = 8;        // 8x8
+        let squareSize = 70;         // 560/8 = 70
+        const canvas = document.getElementById('chessCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Representación del tablero: matriz 8x8, cada celda almacena { piece: string, color: string } o null
+        // piece: símbolo de ajedrez unicode (♙, ♘, etc), color: 'white' o 'black'
+        let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+
+        // Estado de herramienta seleccionada:
+        // { mode: 'place', pieceData: { symbol, color } }  -> para colocar pieza
+        // { mode: 'delete' } -> para eliminar pieza
+        let currentTool = { mode: 'place', pieceData: { symbol: '♙', color: 'white' } };
+
+        // Referencias a botones de pieza y resaltado visual
+        const pieceButtons = document.querySelectorAll('.piece-btn[data-piece]');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const statusSpan = document.getElementById('statusMsg');
+
+        // Actualizar UI de botón seleccionado
+        function updateSelectedButtonUI() {
+            // Remover clase 'selected' de todos los botones de pieza y del botón eliminar
+            pieceButtons.forEach(btn => btn.classList.remove('selected'));
+            deleteBtn.classList.remove('selected', 'delete-mode');
+            
+            if (currentTool.mode === 'place') {
+                const { symbol, color } = currentTool.pieceData;
+                // Buscar botón que tenga data-piece igual al símbolo y data-color igual al color
+                let targetBtn = null;
+                pieceButtons.forEach(btn => {
+                    if (btn.getAttribute('data-piece') === symbol && btn.getAttribute('data-color') === color) {
+                        targetBtn = btn;
+                    }
+                });
+                if (targetBtn) targetBtn.classList.add('selected');
+                statusSpan.innerText = `Modo: Colocar ${color === 'white' ? 'Blanca' : 'Negra'} ${symbol}`;
+                deleteBtn.style.opacity = '0.7';
+            } 
+            else if (currentTool.mode === 'delete') {
+                deleteBtn.classList.add('selected', 'delete-mode');
+                statusSpan.innerText = `Modo: Borrar pieza 🗑️ (clic en casilla)`;
+                deleteBtn.style.opacity = '1';
+            }
+        }
+
+        // Cambiar herramienta a colocación de pieza específica
+        function setPlaceTool(symbol, color) {
+            currentTool = {
+                mode: 'place',
+                pieceData: { symbol, color }
+            };
+            updateSelectedButtonUI();
+        }
+
+        // Cambiar herramienta a modo borrar
+        function setDeleteTool() {
+            currentTool = { mode: 'delete' };
+            updateSelectedButtonUI();
+        }
+
+        // Limpiar todo el tablero (quitar todas las piezas)
+        function clearWholeBoard() {
+            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+            drawBoard();  // redibujar
+        }
+
+        // Colocar pieza en una celda específica (fila, columna)
+        function placePiece(row, col, symbol, color) {
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return false;
+            board[row][col] = { piece: symbol, color: color };
+            drawBoard();
+            return true;
+        }
+
+        // Eliminar pieza de una celda
+        function deletePieceAt(row, col) {
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return false;
+            if (board[row][col] !== null) {
+                board[row][col] = null;
+                drawBoard();
+                return true;
+            }
+            return false;
+        }
+
+        // Dibujar el tablero y las piezas (renderizado completo)
+        function drawBoard() {
+            if (!canvas || !ctx) return;
+            const size = BOARD_SIZE;
+            const sq = squareSize;
+            
+            // Dibujar cuadros
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    const isLight = (i + j) % 2 === 0;
+                    ctx.fillStyle = isLight ? '#f0d9b5' : '#b58863';
+                    ctx.fillRect(j * sq, i * sq, sq, sq);
+                    
+                    // Pequeño realce de bordes
+                    ctx.strokeStyle = '#d3b58b';
+                    ctx.lineWidth = 0.5;
+                    ctx.strokeRect(j * sq, i * sq, sq, sq);
+                }
+            }
+            
+            // Dibujar piezas (usando fuente grande y centrado)
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    const cell = board[i][j];
+                    if (cell && cell.piece) {
+                        const pieceSymbol = cell.piece;
+                        // Sombra sutil
+                        ctx.shadowColor = "rgba(0,0,0,0.4)";
+                        ctx.shadowBlur = 3;
+                        ctx.font = `500 ${Math.floor(sq * 0.65)}px 'Segoe UI', 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', 'Arial'`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        // color según color de pieza (blanca o negra) pero el símbolo ya tiene su propio diseño, mejor darle un toque de sombra
+                        ctx.fillStyle = cell.color === 'white' ? '#ffffff' : '#222222';
+                        // agregar stroke para mejor legibilidad
+                        ctx.shadowBlur = 2;
+                        ctx.fillText(pieceSymbol, j * sq + sq/2, i * sq + sq/2);
+                        // borde ligero oscuro para piezas blancas
+                        if (cell.color === 'white') {
+                            ctx.fillStyle = '#faf9f0';
+                            ctx.fillText(pieceSymbol, j * sq + sq/2, i * sq + sq/2);
+                        } else {
+                            ctx.fillStyle = '#1f1a17';
+                            ctx.fillText(pieceSymbol, j * sq + sq/2, i * sq + sq/2);
+                        }
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+            
+            // Dibujar coordenadas pequeñas (opcional, estética)
+            ctx.font = "12px 'Segoe UI'";
+            ctx.fillStyle = "#4a3727";
+            ctx.shadowBlur = 0;
+            for (let i = 0; i < size; i++) {
+                // letras filas (8,7,...1)
+                ctx.fillText((BOARD_SIZE - i).toString(), 5, i * sq + sq - 6);
+                // letras columnas a,b,c...
+                const colLetter = String.fromCharCode(97 + i);
+                ctx.fillText(colLetter, i * sq + sq - 10, BOARD_SIZE * sq - 4);
+            }
+        }
+
+        // Obtener coordenadas del canvas click (fila, columna)
+        function getSquareFromClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;   // debería ser 1 si canvas no está escalado por CSS, pero por si acaso
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (event.clientX - rect.left) * scaleX;
+            const mouseY = (event.clientY - rect.top) * scaleY;
+            const col = Math.floor(mouseX / squareSize);
+            const row = Math.floor(mouseY / squareSize);
+            if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
+                return { row, col };
+            }
+            return null;
+        }
+
+        // Manejador principal de clic en canvas
+        function onCanvasClick(event) {
+            const pos = getSquareFromClick(event);
+            if (!pos) return;
+            const { row, col } = pos;
+            
+            if (currentTool.mode === 'place') {
+                const { symbol, color } = currentTool.pieceData;
+                // Colocar pieza (sobrescribe si ya hay una pieza, pero es el comportamiento esperado)
+                placePiece(row, col, symbol, color);
+                // Pequeña realimentación: no cambiar herramienta, sigue colocando la misma pieza
+            } 
+            else if (currentTool.mode === 'delete') {
+                const deleted = deletePieceAt(row, col);
+                if (deleted) {
+                    // si se borró algo, se redibuja automáticamente
+                } else {
+                    // Pequeña vibración visual: mostrar mensaje temporal
+                    showTemporaryMessage("No hay pieza para borrar", 800);
+                }
+            }
+        }
+
+        // Mensaje temporal en status
+        let msgTimeout = null;
+        function showTemporaryMessage(msg, duration) {
+            const originalMsg = statusSpan.innerText;
+            statusSpan.innerText = msg;
+            if (msgTimeout) clearTimeout(msgTimeout);
+            msgTimeout = setTimeout(() => {
+                if (currentTool.mode === 'place') {
+                    const { symbol, color } = currentTool.pieceData;
+                    statusSpan.innerText = `Modo: Colocar ${color === 'white' ? 'Blanca' : 'Negra'} ${symbol}`;
+                } else if (currentTool.mode === 'delete') {
+                    statusSpan.innerText = `Modo: Borrar pieza 🗑️ (clic en casilla)`;
+                } else {
+                    statusSpan.innerText = "Tablero listo";
+                }
+            }, duration);
+        }
+
+        // Inicializar eventos de los botones de piezas
+        function initToolbar() {
+            // Botones de piezas
+            pieceButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const symbol = btn.getAttribute('data-piece');
+                    const color = btn.getAttribute('data-color');
+                    if (symbol && color) {
+                        setPlaceTool(symbol, color);
+                    }
+                });
+            });
+            
+            // Botón eliminar (modo borrar)
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentTool.mode === 'delete') {
+                    // si ya está en modo borrar, se puede dejar igual, pero no hace nada extra
+                    setDeleteTool();
+                } else {
+                    setDeleteTool();
+                }
+            });
+            
+            // Botón limpiar todo el tablero
+            clearAllBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearWholeBoard();
+                showTemporaryMessage("✨ Tablero completamente vacío", 1000);
+            });
+        }
+        
+        // Ajustar tamaño del canvas cuando cambie el tamaño de la ventana (si se quiere responsivo, pero mantenemos dimensiones fijas en píxeles)
+        // pero por si se usa en móvil, la escala es visual, pero los cálculos con getBoundingClientRect funcionan perfecto.
+        function handleResize() {
+            // Recalcular squareSize basado en el tamaño actual del canvas? 
+            // El canvas tiene dimensiones fijas 560x560 en atributo width/height, por tanto squareSize sigue siendo 70.
+            // Sin embargo si alguien modifica CSS width/height hay que recalcular, pero lo dejamos con el atributo fijo.
+            // Forzamos que el canvas tenga dimensiones lógicas exactas.
+            const rect = canvas.getBoundingClientRect();
+            // Esto es solo para mantener consistencia de squareSize si el canvas se redimensiona visualmente por CSS, pero no alteramos
+            // el sistema de coordenadas porque usamos el width/height real del canvas (560). Por tanto siempre squareSize = 560/8 = 70
+            // y los cálculos de getSquareFromClick usan canvas.width (560) y las coordenadas transformadas.
+            // Todo bien.
+        }
+        
+        // También se podría añadir una funcionalidad para cambiar tamaño del tablero dinámico? No necesario.
+        // Inicializar con algunas piezas de ejemplo para que no esté vacío (opcional pero bonito)
+        function initExamplePieces() {
+            // Colocar un par de piezas para mostrar la funcionalidad: un rey blanco en e1, rey negro en e8, torre blanca etc.
+            // Para que al abrir se vea interesante, pero el usuario puede borrar/colocar.
+            // Según coordenadas: fila 0 es la parte superior (negra en ajedrez clásico vista desde blancas abajo).
+            // Pero es indiferente, pero pondremos unas pocas piezas para ejemplo sin saturar.
+            // Representación: fila 7 = fila base de blancas, fila 0 = base negras.
+            // Colocamos: Rey blanco en e1 (fila 7, col 4), Dama blanca d1 (fila7,col3); Rey negro e8 (fila0,col4); Peón blanco e2 (fila6,col4)
+            // y peón negro e7 (fila1,col4)
+            board[7][4] = { piece: '♔', color: 'white' };   // Rey blanco
+            board[7][3] = { piece: '♕', color: 'white' };   // Dama blanca
+            board[6][4] = { piece: '♙', color: 'white' };   // Peón blanco e2
+            board[0][4] = { piece: '♚', color: 'black' };   // Rey negro
+            board[1][4] = { piece: '♟', color: 'black' };   // Peón negro e7
+            board[0][0] = { piece: '♜', color: 'black' };   // Torre negra a8
+            board[7][7] = { piece: '♖', color: 'white' };   // Torre blanca h1
+            board[7][5] = { piece: '♘', color: 'white' };   // Caballo blanco f1
+            board[0][1] = { piece: '♞', color: 'black' };   // Caballo negro b8
+            // Adicional un alfil
+            board[7][2] = { piece: '♗', color: 'white' };   // alfil c1
+            board[0][5] = { piece: '♝', color: 'black' };   // alfil f8
+        }
+
+        // También si se desea arrastrar? No se pide, pero es un tablero interactivo de colocar con clicks.
+        // Se puede añadir soporte táctil.
+        function bindEvents() {
+            canvas.addEventListener('click', onCanvasClick);
+            window.addEventListener('resize', () => {
+                drawBoard();  // al redimensionar la ventana no cambia el tablero, pero por si acaso redibuja
+            });
+        }
+        
+        // Prevenir context menu en canvas para evitar el menú derecho
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Inicializar todo
+        function init() {
+            squareSize = canvas.width / BOARD_SIZE; // 70
+            initExamplePieces();  // colocamos ejemplo demostrativo
+            drawBoard();
+            initToolbar();
+            bindEvents();
+            setPlaceTool('♙', 'white');  // selección por defecto: peón blanco
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>
+```
